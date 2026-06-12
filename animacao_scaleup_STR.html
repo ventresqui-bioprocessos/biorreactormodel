@@ -1,0 +1,1298 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Comparador de agitacao equivalente - STR</title>
+  <style>
+    :root {
+      --ink: #062c18;
+      --muted: #52705b;
+      --line: #cfe2d1;
+      --panel: #ffffff;
+      --soft: #f4faf3;
+      --canvas: #edf7ef;
+      --accent: #0b6b35;
+      --accent-2: #3a9b21;
+      --ok: #2f7f39;
+      --warn: #9a621b;
+      --steel: #78927d;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: #f5faf4;
+      min-height: 100vh;
+    }
+
+    button, input {
+      font: inherit;
+    }
+
+    .app {
+      width: min(1500px, 100%);
+      margin: 0 auto;
+      padding: 18px;
+    }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: 320px minmax(0, 1fr);
+      gap: 22px;
+      align-items: center;
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 12px 24px rgba(6, 44, 24, 0.07);
+      padding: 14px 16px;
+      margin-bottom: 16px;
+    }
+
+    .brand-logo {
+      display: block;
+      width: 100%;
+      max-width: 320px;
+      height: 110px;
+      object-fit: contain;
+      background: #ffffff;
+    }
+
+    h1 {
+      margin: 0 0 4px;
+      font-size: clamp(22px, 2.5vw, 36px);
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+      max-width: 920px;
+      line-height: 1.45;
+    }
+
+    .source {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+      margin-top: 8px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 360px minmax(0, 1fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .layout > * {
+      min-width: 0;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 12px 24px rgba(21, 38, 55, 0.06);
+      min-width: 0;
+    }
+
+    .controls {
+      padding: 14px;
+      display: grid;
+      gap: 16px;
+      position: sticky;
+      top: 12px;
+    }
+
+    .section-title {
+      font-size: 12px;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      margin-bottom: 8px;
+    }
+
+    .play-row {
+      display: grid;
+      gap: 8px;
+    }
+
+    .btn {
+      border: 1px solid var(--line);
+      background: var(--soft);
+      color: var(--ink);
+      border-radius: 8px;
+      min-height: 40px;
+      padding: 9px 10px;
+      cursor: pointer;
+      transition: border-color 160ms ease, background 160ms ease, color 160ms ease, transform 120ms ease;
+      white-space: nowrap;
+    }
+
+    .btn:hover {
+      border-color: #9aacbc;
+      transform: translateY(-1px);
+    }
+
+    .btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #ffffff;
+      font-weight: 800;
+    }
+
+    .field {
+      display: grid;
+      gap: 8px;
+    }
+
+    .label-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--muted);
+      font-size: 14px;
+      align-items: baseline;
+    }
+
+    .label-row strong {
+      color: var(--ink);
+      font-size: 15px;
+    }
+
+    input[type="range"] {
+      accent-color: var(--accent);
+      width: 100%;
+    }
+
+    input[type="number"] {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      min-height: 38px;
+      padding: 8px 10px;
+      background: #ffffff;
+      color: var(--ink);
+    }
+
+    .assumptions {
+      display: grid;
+      gap: 8px;
+    }
+
+    .assumption {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 9px 10px;
+      background: var(--soft);
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .assumption strong {
+      color: var(--ink);
+      text-align: right;
+    }
+
+    .rpm-controls {
+      display: grid;
+      gap: 10px;
+      max-height: 430px;
+      overflow-y: auto;
+      padding-right: 2px;
+    }
+
+    .rpm-controls + .btn {
+      margin-top: 10px;
+      width: 100%;
+    }
+
+    .rpm-control {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--soft);
+      padding: 9px 10px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .rpm-control-head,
+    .rpm-control-line {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .rpm-control-head span {
+      color: var(--ink);
+      font-weight: 800;
+      line-height: 1.2;
+    }
+
+    .rpm-control-head strong {
+      color: var(--accent);
+      white-space: nowrap;
+    }
+
+    .rpm-control input[type="number"] {
+      width: 92px;
+      min-height: 32px;
+      padding: 5px 7px;
+    }
+
+    .rpm-control .manual-tag {
+      color: #9f2342;
+      font-weight: 800;
+    }
+
+    .main {
+      display: grid;
+      gap: 16px;
+      min-width: 0;
+    }
+
+    .sim-panel {
+      padding: 14px;
+      border-color: rgba(11, 107, 53, 0.22);
+    }
+
+    .sim-header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 14px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .stage-name {
+      font-size: clamp(20px, 2vw, 28px);
+      font-weight: 850;
+      margin: 0;
+    }
+
+    .criterion {
+      color: var(--muted);
+      margin: 2px 0 0;
+      line-height: 1.35;
+    }
+
+    .badge-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    .badge {
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      padding: 7px 10px;
+      font-size: 12px;
+      background: var(--soft);
+      color: var(--muted);
+      font-weight: 750;
+    }
+
+    .badge.ok {
+      background: #ecf8ec;
+      border-color: #b8ddbd;
+      color: var(--ok);
+    }
+
+    .canvas-shell {
+      background: var(--canvas);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      min-height: 550px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 550px;
+    }
+
+    .scale-note {
+      position: absolute;
+      left: 14px;
+      bottom: 12px;
+      color: var(--muted);
+      font-size: 12px;
+      background: rgba(255, 255, 255, 0.86);
+      border: 1px solid rgba(214, 222, 230, 0.9);
+      border-radius: 8px;
+      padding: 7px 9px;
+    }
+
+    .reactor-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .reactor-card {
+      border: 1px solid var(--line);
+      background: #ffffff;
+      border-radius: 8px;
+      padding: 11px 12px;
+      min-height: 190px;
+    }
+
+    .reactor-card.base {
+      border-color: rgba(11, 107, 53, 0.65);
+      box-shadow: inset 0 0 0 1px rgba(11, 107, 53, 0.18);
+    }
+
+    .reactor-card h3 {
+      margin: 0 0 8px;
+      font-size: 15px;
+    }
+
+    .rpm-value {
+      font-size: clamp(22px, 2.4vw, 30px);
+      line-height: 1;
+      font-weight: 900;
+      color: var(--accent);
+    }
+
+    .unit {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 4px;
+    }
+
+    .mini-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5px 10px;
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 10px;
+    }
+
+    .mini-grid strong {
+      color: var(--ink);
+      font-weight: 780;
+    }
+
+    @media (max-width: 1080px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .controls {
+        position: static;
+      }
+
+      .topbar {
+        grid-template-columns: 1fr;
+      }
+
+      .brand-logo {
+        max-width: 360px;
+      }
+
+      .reactor-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 760px) {
+      .app {
+        padding: 10px;
+      }
+
+      .reactor-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      canvas {
+        height: 480px;
+      }
+
+      .canvas-shell {
+        min-height: 480px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .reactor-grid {
+        grid-template-columns: 1fr;
+      }
+
+      canvas {
+        height: 430px;
+      }
+
+      .canvas-shell {
+        min-height: 430px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <img class="brand-logo" src="journal_club_logo.png" alt="Journal Club de Bioprocessos" />
+      <div>
+        <h1>Simulador de agitacao equivalente STR</h1>
+        <p class="subtitle">Altere a rotacao do impelidor e a aeracao no biorreator de bancada para ver, lado a lado, as rotacoes equivalentes nos biorreatores industriais e como KLa e Oxigenio Dissolvido mudam em cada escala.</p>
+        <div class="source">Dados fixos: planilha Velocidade agitacao, origem 5 L | Industriais: HT/DT = 3:1 | KLa: correlacao da tese</div>
+      </div>
+    </header>
+
+    <div class="layout">
+      <aside class="panel controls">
+        <section class="field">
+          <div class="label-row">
+            <span>Agitacao no biorreator de bancada</span>
+            <strong><span id="baseRpmValue">1.500</span> rpm</strong>
+          </div>
+          <input id="rpmSlider" type="range" min="100" max="2500" step="5" value="1500" />
+          <input id="rpmInput" type="number" min="1" max="5000" step="1" value="1500" />
+        </section>
+
+        <section>
+          <div class="section-title">Velocidades por biorreator</div>
+          <div class="rpm-controls" id="rpmControls"></div>
+          <button class="btn" id="syncRpmButton" type="button">Restaurar equivalentes</button>
+        </section>
+
+        <section class="field">
+          <div class="label-row">
+            <span>Aeracao especifica</span>
+            <strong><span id="aerationValue">1,1</span> VVM</strong>
+          </div>
+          <input id="aerationSlider" type="range" min="0.1" max="2.5" step="0.1" value="1.1" />
+          <input id="aerationInput" type="number" min="0.1" max="5" step="0.1" value="1.1" />
+        </section>
+
+        <section>
+          <div class="section-title">Animacao</div>
+          <div class="play-row">
+            <button class="btn" id="pauseButton" type="button">Pausar</button>
+            <button class="btn" id="resetButton" type="button">Reset</button>
+          </div>
+        </section>
+
+        <section>
+          <div class="section-title">Premissas</div>
+          <div class="assumptions">
+            <div class="assumption"><span>Equivalencia</span><strong>RPM2 = RPM1*D1/D2</strong></div>
+            <div class="assumption"><span>Aeracao</span><strong>Q = V*VVM</strong></div>
+            <div class="assumption"><span>KLa</span><strong>0,026(Pg/V)^0,4(Vs)^0,5</strong></div>
+            <div class="assumption"><span>OD estimado</span><strong>C* - OUR/KLa</strong></div>
+            <div class="assumption"><span>OUR assumido</span><strong>550 mg/L.h</strong></div>
+            <div class="assumption"><span>Industrial</span><strong>HT/DT = 3:1</strong></div>
+            <div class="assumption"><span>Enchimento</span><strong>HL/HT = 0,8</strong></div>
+            <div class="assumption"><span>Fonte impelidor</span><strong id="impellerSourceLabel">Banco 5 L</strong></div>
+          </div>
+        </section>
+      </aside>
+
+      <section class="main">
+        <div class="panel sim-panel">
+          <div class="sim-header">
+            <div>
+              <p class="stage-name" id="mainTitle">Comparacao lado a lado</p>
+              <p class="criterion" id="mainDescription">A rotacao dos biorreatores industriais parte do diametro equivalente do impelidor; voce tambem pode selecionar rpm individual para recalcular KLa e OD por escala.</p>
+            </div>
+            <div class="badge-row">
+              <span class="badge ok" id="baseBadge">Bancada: 2 L</span>
+              <span class="badge" id="geometryBadge">Industriais 3:1</span>
+              <span class="badge" id="aerationBadge">1,1 VVM</span>
+            </div>
+          </div>
+
+          <div class="canvas-shell">
+            <canvas id="bioreactorCanvas" width="1200" height="620"></canvas>
+            <div class="scale-note">Modelos visuais baseados na imagem de referencia; os calculos usam os volumes reais.</div>
+          </div>
+
+          <div class="reactor-grid" id="reactorCards"></div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const industrialVolumes = [100, 1000, 5000, 10000];
+
+    const sourceConfigs = {
+      thesis: {
+        label: "Tese 2 L",
+        baseName: "Biorreator de Bancada 2 L",
+        baseVolumeL: 2,
+        baseImpellerMm: 43,
+        defaultRpm: 265,
+        minRpm: 20,
+        maxRpm: 1200,
+        impellerSource: "Tese + geometria",
+        rows: null
+      },
+      table5: {
+        label: "Tabela origem 5 L",
+        baseName: "Biorreator de Bancada 5 L",
+        baseVolumeL: 5,
+        baseImpellerMm: 55,
+        defaultRpm: 1500,
+        minRpm: 100,
+        maxRpm: 2500,
+        impellerSource: "Banco 5 L",
+        data: [
+          [5, 55, 1500, null, 2],
+          [10, 65, 800, null, 2],
+          [50, 100, 825, null, 8],
+          [100, 125, 660, null, 12],
+          [200, 160, 515, 2, null],
+          [300, 180, 460, null, null],
+          [400, 200, 420, null, null],
+          [500, 210, 400, 3, null],
+          [1000, 270, 310, 3.7, null],
+          [2000, 330, 250, 3.7, null],
+          [3000, 385, 215, 5.5, null],
+          [4000, 425, 200, 7.5, null],
+          [5000, 460, 180, 11, null],
+          [10000, 575, 150, 22, null]
+        ]
+      },
+      table10: {
+        label: "Tabela origem 10 L",
+        baseName: "Biorreator de Bancada 10 L",
+        baseVolumeL: 10,
+        baseImpellerMm: 65,
+        defaultRpm: 800,
+        minRpm: 50,
+        maxRpm: 1800,
+        impellerSource: "Banco 10 L",
+        data: [
+          [10, 65, 800, null, 2],
+          [50, 100, 520, null, 8],
+          [100, 125, 420, null, 12],
+          [200, 160, 325, 1.5, null],
+          [300, 180, 300, null, null],
+          [400, 200, 260, null, null],
+          [500, 210, 250, 2, null],
+          [1000, 270, 200, 3.7, null],
+          [2000, 330, 160, 3.7, null],
+          [3000, 385, 135, 5.5, null],
+          [4000, 425, 125, 7.5, null],
+          [5000, 460, 115, 7.5, null],
+          [10000, 575, 90, 20, null]
+        ]
+      }
+    };
+
+    for (const source of Object.values(sourceConfigs)) {
+      if (source.data) {
+        source.rows = source.data.map(([volumeL, impellerMm, rpm, powerKW, torqueNm]) => ({
+          volumeL,
+          impellerMm,
+          rpm,
+          powerKW,
+          torqueNm
+        }));
+      }
+    }
+
+    const assumptions = {
+      liquidHeightRatio: 0.8,
+      baseHtDt: 1.83,
+      industrialHtDt: 3,
+      impellerTankRatio: 0.33,
+      densityKgM3: 995.61,
+      klaCoefficient: 0.026,
+      oxygenSaturationMgL: 7.2,
+      oxygenDemandMgLh: 550,
+      thesisBase: {
+        dT: 0.127,
+        hT: 0.233,
+        hL: 0.187,
+        impellerMm: 43
+      }
+    };
+
+    const state = {
+      source: "table5",
+      baseRpm: 1500,
+      rpmOverrides: {},
+      aerationVvm: 1.1,
+      paused: false,
+      angle: 0,
+      lastTime: performance.now(),
+      bubbles: []
+    };
+
+    const visualProfiles = [
+      {
+        src: "assets/reactor_bench.png",
+        heightRatio: 0.43,
+        maxWidthRatio: 0.82,
+        cutoutRegion: { x: 0.29, y: 0.34, w: 0.24, h: 0.5 },
+        logoPanel: { x: 0.69, y: 0.24, w: 0.23, h: 0.22, scale: 0.68, yOffset: 0.18 }
+      },
+      {
+        src: "assets/reactor_industrial.png",
+        heightRatio: 0.68,
+        maxWidthRatio: 0.9,
+        cutoutRegion: { x: 0.31, y: 0.38, w: 0.24, h: 0.42 },
+        logoPanel: { x: 0.62, y: 0.2, w: 0.28, h: 0.26, scale: 0.62, yOffset: 0.22 }
+      },
+      {
+        src: "assets/reactor_industrial.png",
+        heightRatio: 0.76,
+        maxWidthRatio: 0.92,
+        cutoutRegion: { x: 0.31, y: 0.38, w: 0.24, h: 0.42 },
+        logoPanel: { x: 0.62, y: 0.2, w: 0.28, h: 0.26, scale: 0.62, yOffset: 0.22 }
+      },
+      {
+        src: "assets/reactor_industrial.png",
+        heightRatio: 0.88,
+        maxWidthRatio: 0.94,
+        cutoutRegion: { x: 0.31, y: 0.38, w: 0.24, h: 0.42 },
+        logoPanel: { x: 0.62, y: 0.2, w: 0.28, h: 0.26, scale: 0.62, yOffset: 0.22 }
+      },
+      {
+        src: "assets/reactor_large.png",
+        heightRatio: 0.98,
+        maxWidthRatio: 0.95,
+        cutoutRegion: { x: 0.15, y: 0.26, w: 0.4, h: 0.56 },
+        logoPanel: { x: 0.71, y: 0.68, w: 0.22, h: 0.18, scale: 0.78, yOffset: 0.18 }
+      }
+    ];
+
+    visualProfiles.forEach(profile => {
+      profile.image = new Image();
+      profile.image.onload = () => {
+        profile.loaded = true;
+      };
+      profile.image.src = profile.src;
+    });
+
+    const engcoLogo = new Image();
+    engcoLogo.src = "assets/engco_logo.png";
+
+    const el = {
+      rpmSlider: document.getElementById("rpmSlider"),
+      rpmInput: document.getElementById("rpmInput"),
+      baseRpmValue: document.getElementById("baseRpmValue"),
+      aerationSlider: document.getElementById("aerationSlider"),
+      aerationInput: document.getElementById("aerationInput"),
+      aerationValue: document.getElementById("aerationValue"),
+      pauseButton: document.getElementById("pauseButton"),
+      resetButton: document.getElementById("resetButton"),
+      syncRpmButton: document.getElementById("syncRpmButton"),
+      baseBadge: document.getElementById("baseBadge"),
+      aerationBadge: document.getElementById("aerationBadge"),
+      impellerSourceLabel: document.getElementById("impellerSourceLabel"),
+      rpmControls: document.getElementById("rpmControls"),
+      reactorCards: document.getElementById("reactorCards"),
+      canvas: document.getElementById("bioreactorCanvas")
+    };
+
+    const ctx = el.canvas.getContext("2d");
+
+    function fmt(value, digits = 1) {
+      return Number(value).toLocaleString("pt-BR", {
+        minimumFractionDigits: digits,
+        maximumFractionDigits: digits
+      });
+    }
+
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function lerp(a, b, t) {
+      return a + (b - a) * t;
+    }
+
+    function getSource() {
+      return sourceConfigs[state.source];
+    }
+
+    function sourceVolumes() {
+      return [getSource().baseVolumeL, ...industrialVolumes];
+    }
+
+    function reactorName(volumeL, index) {
+      if (index === 0) return getSource().baseName;
+      if (volumeL === 100) return "Industrial 100 L";
+      if (volumeL === 1000) return "Industrial 1.000 L";
+      if (volumeL === 5000) return "Industrial 5.000 L";
+      return "Industrial 10.000 L";
+    }
+
+    function volumeKey(volumeL) {
+      return String(volumeL);
+    }
+
+    function tableLookup(volumeL) {
+      const source = getSource();
+      if (!source.rows) return null;
+      const exact = source.rows.find(row => row.volumeL === volumeL);
+      if (exact) return { ...exact, exact: true };
+
+      const rows = [...source.rows].sort((a, b) => a.volumeL - b.volumeL);
+      const lower = [...rows].reverse().find(row => row.volumeL <= volumeL) ?? rows[0];
+      const upper = rows.find(row => row.volumeL >= volumeL) ?? rows[rows.length - 1];
+      if (lower.volumeL === upper.volumeL) return { ...lower, exact: false };
+
+      const span = Math.log10(upper.volumeL) - Math.log10(lower.volumeL);
+      const factor = (Math.log10(volumeL) - Math.log10(lower.volumeL)) / span;
+      return {
+        volumeL,
+        impellerMm: lerp(lower.impellerMm, upper.impellerMm, factor),
+        rpm: null,
+        powerKW: null,
+        torqueNm: null,
+        exact: false
+      };
+    }
+
+    function tankGeometry(volumeL, index) {
+      const source = getSource();
+      const volumeM3 = volumeL / 1000;
+      const isIndustrial = index > 0;
+      const htDt = isIndustrial ? assumptions.industrialHtDt : assumptions.baseHtDt;
+
+      if (state.source === "thesis" && index === 0) {
+        return {
+          volumeM3,
+          htdt: assumptions.thesisBase.hT / assumptions.thesisBase.dT,
+          dT: assumptions.thesisBase.dT,
+          hT: assumptions.thesisBase.hT,
+          hL: assumptions.thesisBase.hL,
+          impellerMm: assumptions.thesisBase.impellerMm,
+          tableRow: null
+        };
+      }
+
+      const dT = Math.pow((4 * volumeM3) / (Math.PI * assumptions.liquidHeightRatio * htDt), 1 / 3);
+      const hT = htDt * dT;
+      const hL = assumptions.liquidHeightRatio * hT;
+      const tableRow = source.rows ? tableLookup(volumeL) : null;
+      const impellerMm = tableRow ? tableRow.impellerMm : assumptions.impellerTankRatio * dT * 1000;
+
+      return { volumeM3, htdt: htDt, dT, hT, hL, impellerMm, tableRow };
+    }
+
+    function klaFrom(row, rpm, aerationVvm) {
+      const qM3S = row.volumeM3 * aerationVvm / 60;
+      const qLMin = qM3S * 60000;
+      const n = 2 * Math.PI * rpm / 60;
+      const daM = row.impellerMm / 1000;
+      const superficialVelocity = 4 * qM3S / (Math.PI * row.dT * row.dT);
+      const pgOverV = Math.pow(n, 3.15) * Math.pow(daM, 2.85) / Math.pow(qM3S, 0.25);
+      const klaS = assumptions.klaCoefficient * Math.pow(pgOverV, 0.4) * Math.pow(superficialVelocity, 0.5);
+      return {
+        qM3S,
+        qLMin,
+        superficialVelocity,
+        pgOverV,
+        klaS,
+        klaH: klaS * 3600
+      };
+    }
+
+    function dissolvedOxygenFrom(klaH) {
+      const deficitMgL = assumptions.oxygenDemandMgLh / Math.max(klaH, 0.01);
+      const dissolvedMgL = clamp(assumptions.oxygenSaturationMgL - deficitMgL, 0, assumptions.oxygenSaturationMgL);
+      return {
+        dissolvedOxygenMgL: dissolvedMgL,
+        dissolvedOxygenPercent: 100 * dissolvedMgL / assumptions.oxygenSaturationMgL
+      };
+    }
+
+    function computeReactors() {
+      const source = getSource();
+      return sourceVolumes().map((volumeL, index) => {
+        const geom = tankGeometry(volumeL, index);
+        const equivalentRpm = state.baseRpm * source.baseImpellerMm / geom.impellerMm;
+        const override = state.rpmOverrides[volumeKey(volumeL)];
+        const rpm = index === 0 ? state.baseRpm : (Number.isFinite(override) ? override : equivalentRpm);
+        const ratio = rpm / state.baseRpm;
+        let adjustedPower = null;
+        if (geom.tableRow?.powerKW && geom.tableRow?.rpm) {
+          adjustedPower = geom.tableRow.powerKW * Math.pow(rpm / geom.tableRow.rpm, 3);
+        }
+        const oxygen = klaFrom(geom, rpm, state.aerationVvm);
+        const dissolvedOxygen = dissolvedOxygenFrom(oxygen.klaH);
+        return {
+          index,
+          name: reactorName(volumeL, index),
+          volumeL,
+          rpm,
+          equivalentRpm,
+          isManualRpm: index > 0 && Number.isFinite(override),
+          ratio,
+          adjustedPower,
+          ...oxygen,
+          ...dissolvedOxygen,
+          tablePower: geom.tableRow?.powerKW ?? null,
+          torqueNm: geom.tableRow?.torqueNm ?? null,
+          ...geom
+        };
+      });
+    }
+
+    function setSource(sourceKey) {
+      state.source = sourceKey;
+      const source = getSource();
+      state.baseRpm = source.defaultRpm;
+      state.rpmOverrides = {};
+      state.bubbles = sourceVolumes().map(() => []);
+      el.rpmSlider.min = source.minRpm;
+      el.rpmSlider.max = source.maxRpm;
+      el.rpmSlider.value = source.defaultRpm;
+      el.rpmInput.min = 1;
+      el.rpmInput.max = Math.max(5000, source.maxRpm);
+      el.rpmInput.value = source.defaultRpm;
+      renderAll();
+    }
+
+    function setBaseRpm(value) {
+      const source = getSource();
+      state.baseRpm = clamp(Number(value) || source.defaultRpm, 1, 5000);
+      el.rpmInput.value = Math.round(state.baseRpm);
+      el.rpmSlider.value = clamp(state.baseRpm, Number(el.rpmSlider.min), Number(el.rpmSlider.max));
+      renderAll();
+    }
+
+    function setReactorRpm(volumeL, value) {
+      const source = getSource();
+      const parsed = Number(value);
+      if (!Number.isFinite(parsed)) return;
+      if (volumeL === source.baseVolumeL) {
+        setBaseRpm(parsed);
+        return;
+      }
+      state.rpmOverrides[volumeKey(volumeL)] = clamp(parsed, 1, 5000);
+      renderAll();
+    }
+
+    function clearRpmOverrides() {
+      state.rpmOverrides = {};
+      renderAll();
+    }
+
+    function setAeration(value) {
+      const parsed = Number(value);
+      state.aerationVvm = clamp(Number.isFinite(parsed) ? parsed : 1.1, 0.1, 5);
+      el.aerationInput.value = state.aerationVvm.toFixed(1);
+      el.aerationSlider.value = clamp(state.aerationVvm, Number(el.aerationSlider.min), Number(el.aerationSlider.max));
+      renderAll();
+    }
+
+    function renderControls() {
+      el.baseRpmValue.textContent = fmt(state.baseRpm, 0);
+      el.baseBadge.textContent = `Bancada: ${getSource().baseVolumeL} L`;
+      el.aerationValue.textContent = fmt(state.aerationVvm, 1);
+      el.aerationBadge.textContent = `${fmt(state.aerationVvm, 1)} VVM`;
+      el.impellerSourceLabel.textContent = getSource().impellerSource;
+    }
+
+    function rpmControlMax(row) {
+      const dynamicMax = Math.ceil(Math.max(row.equivalentRpm, row.rpm, 120) * 2.2 / 10) * 10;
+      return clamp(dynamicMax, 250, 5000);
+    }
+
+    function renderRpmControls(rows) {
+      el.rpmControls.innerHTML = "";
+      rows.forEach(row => {
+        const item = document.createElement("article");
+        item.className = "rpm-control";
+        const max = rpmControlMax(row);
+        item.innerHTML = `
+          <div class="rpm-control-head">
+            <span>${row.name}</span>
+            <strong>${fmt(row.rpm, row.rpm >= 100 ? 0 : 1)} rpm</strong>
+          </div>
+          <input class="reactor-rpm-slider" data-volume="${row.volumeL}" type="range" min="1" max="${max}" step="5" value="${clamp(row.rpm, 1, max)}" />
+          <div class="rpm-control-line">
+            <input class="reactor-rpm-input" data-volume="${row.volumeL}" type="number" min="1" max="5000" step="1" value="${Math.round(row.rpm)}" />
+            <span class="${row.isManualRpm ? "manual-tag" : ""}">${row.index === 0 ? "Bancada" : row.isManualRpm ? "Manual" : `Eq. ${fmt(row.equivalentRpm, 0)} rpm`}</span>
+          </div>
+        `;
+        el.rpmControls.appendChild(item);
+      });
+
+      el.rpmControls.querySelectorAll(".reactor-rpm-slider").forEach(input => {
+        input.addEventListener("input", event => setReactorRpm(Number(event.target.dataset.volume), event.target.value));
+      });
+      el.rpmControls.querySelectorAll(".reactor-rpm-input").forEach(input => {
+        input.addEventListener("input", event => {
+          if (event.target.value !== "") setReactorRpm(Number(event.target.dataset.volume), event.target.value);
+        });
+        input.addEventListener("change", event => setReactorRpm(Number(event.target.dataset.volume), event.target.value));
+      });
+    }
+
+    function renderCards(rows) {
+      el.reactorCards.innerHTML = "";
+      rows.forEach(row => {
+        const card = document.createElement("article");
+        card.className = `reactor-card ${row.index === 0 ? "base" : ""}`;
+        card.innerHTML = `
+          <h3>${row.name}</h3>
+          <div class="rpm-value">${fmt(row.rpm, row.rpm >= 100 ? 0 : 1)}</div>
+          <div class="unit">${row.index === 0 ? "rpm de bancada" : row.isManualRpm ? "rpm selecionado" : "rpm equivalente"}</div>
+          <div class="mini-grid">
+            <span>Volume</span><strong>${fmt(row.volumeL, 0)} L</strong>
+            <span>D imp.</span><strong>${fmt(row.impellerMm, 0)} mm</strong>
+            <span>Aeracao</span><strong>${fmt(row.qLMin, row.qLMin >= 100 ? 0 : 1)} L/min</strong>
+            <span>KLa</span><strong>${fmt(row.klaH, 1)} h^-1</strong>
+            <span>OD est.</span><strong>${fmt(row.dissolvedOxygenPercent, 1)}%</strong>
+            <span>OD</span><strong>${fmt(row.dissolvedOxygenMgL, 2)} mg/L</strong>
+            <span>HT/DT</span><strong>${fmt(row.htdt, 2)}</strong>
+            <span>Relacao</span><strong>${fmt(row.ratio, 2)}x</strong>
+          </div>
+        `;
+        el.reactorCards.appendChild(card);
+      });
+    }
+
+    function renderAll() {
+      const rows = computeReactors();
+      renderControls();
+      renderRpmControls(rows);
+      renderCards(rows);
+    }
+
+    function resizeCanvas() {
+      const rect = el.canvas.getBoundingClientRect();
+      const ratio = window.devicePixelRatio || 1;
+      el.canvas.width = Math.round(rect.width * ratio);
+      el.canvas.height = Math.round(rect.height * ratio);
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    }
+
+    function ensureBubbles(index, count) {
+      const list = state.bubbles[index] ?? (state.bubbles[index] = []);
+      while (list.length < count) {
+        list.push({
+          x: 0.18 + Math.random() * 0.64,
+          y: Math.random(),
+          r: 1 + Math.random() * 2.4,
+          phase: Math.random() * Math.PI * 2,
+          drift: 0.2 + Math.random() * 0.8,
+          speed: 0.25 + Math.random() * 0.8
+        });
+      }
+      if (list.length > count) list.length = count;
+      return list;
+    }
+
+    function drawImpeller(cx, cy, radius, angle, color) {
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(angle);
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(0, 0, radius * 0.16, 0, Math.PI * 2);
+      ctx.fill();
+      for (let i = 0; i < 6; i++) {
+        ctx.rotate(Math.PI / 3);
+        ctx.beginPath();
+        ctx.roundRect(radius * 0.12, -radius * 0.09, radius * 0.72, radius * 0.18, 4);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    function drawCutaway(row, area, dt) {
+      const bubbles = ensureBubbles(row.index, Math.round(clamp(10 + Math.log10(row.qLMin + 1) * 12, 10, 46)));
+      const transfer = clamp(row.klaH / 520, 0.1, 0.75);
+      const radius = Math.min(18, area.w * 0.22);
+      ctx.save();
+      ctx.shadowColor = "rgba(6, 44, 24, 0.18)";
+      ctx.shadowBlur = 10;
+      ctx.shadowOffsetY = 4;
+      ctx.fillStyle = "rgba(255, 255, 255, 0.78)";
+      ctx.strokeStyle = "rgba(11, 107, 53, 0.7)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.roundRect(area.x, area.y, area.w, area.h, radius);
+      ctx.fill();
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.clip();
+
+      const liquidTop = area.y + area.h * 0.13;
+      const liquidHeight = area.h * 0.83;
+      const gradient = ctx.createLinearGradient(area.x, liquidTop, area.x, area.y + area.h);
+      gradient.addColorStop(0, `rgba(88, 190, 220, ${0.16 + transfer * 0.16})`);
+      gradient.addColorStop(1, `rgba(16, 112, 172, ${0.24 + transfer * 0.18})`);
+      ctx.fillStyle = gradient;
+      ctx.fillRect(area.x, liquidTop, area.w, liquidHeight);
+
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.7)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(area.x + area.w * 0.08, liquidTop + 1);
+      ctx.bezierCurveTo(
+        area.x + area.w * 0.32,
+        liquidTop - area.h * 0.03,
+        area.x + area.w * 0.68,
+        liquidTop + area.h * 0.03,
+        area.x + area.w * 0.92,
+        liquidTop
+      );
+      ctx.stroke();
+
+      ctx.strokeStyle = "rgba(6, 44, 24, 0.34)";
+      ctx.lineWidth = Math.max(1, area.w * 0.018);
+      ctx.beginPath();
+      ctx.moveTo(area.x + area.w * 0.5, area.y + area.h * 0.12);
+      ctx.lineTo(area.x + area.w * 0.5, area.y + area.h * 0.92);
+      ctx.stroke();
+
+      ctx.fillStyle = "rgba(6, 44, 24, 0.24)";
+      const baffleW = clamp(area.w * 0.035, 2, 5);
+      ctx.fillRect(area.x + area.w * 0.15, liquidTop + area.h * 0.08, baffleW, area.h * 0.68);
+      ctx.fillRect(area.x + area.w * 0.84, liquidTop + area.h * 0.08, baffleW, area.h * 0.68);
+
+      const spin = state.angle * clamp(row.rpm / 85, 0.9, 12);
+      const impRadius = clamp(area.w * 0.22, 7, 24);
+      drawImpeller(area.x + area.w * 0.5, area.y + area.h * 0.58, impRadius, spin, "#0b6b35");
+      drawImpeller(area.x + area.w * 0.5, area.y + area.h * 0.76, impRadius * 0.92, -spin * 0.82, "#9f2342");
+
+      ctx.fillStyle = "rgba(255, 255, 255, 0.76)";
+      ctx.strokeStyle = "rgba(16, 95, 139, 0.35)";
+      ctx.lineWidth = 1;
+      for (const bubble of bubbles) {
+        if (!state.paused) {
+          bubble.y -= dt * 0.000045 * bubble.speed * clamp(row.klaH / 35, 0.2, 3.2);
+        }
+        if (bubble.y < 0) {
+          bubble.y = 1 + Math.random() * 0.08;
+          bubble.x = 0.16 + Math.random() * 0.68;
+        }
+        const bx = area.x + area.w * bubble.x + Math.sin(state.angle * bubble.drift + bubble.phase) * area.w * 0.08;
+        const by = area.y + area.h - bubble.y * area.h;
+        ctx.beginPath();
+        ctx.arc(bx, by, bubble.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      }
+
+      const odFraction = clamp(row.dissolvedOxygenPercent / 100, 0, 1);
+      const gaugeX = area.x + area.w * 0.14;
+      const gaugeY = area.y + area.h * 0.06;
+      const gaugeW = area.w * 0.72;
+      const gaugeH = clamp(area.h * 0.035, 4, 8);
+      ctx.fillStyle = "rgba(255, 255, 255, 0.72)";
+      ctx.beginPath();
+      ctx.roundRect(gaugeX, gaugeY, gaugeW, gaugeH, gaugeH / 2);
+      ctx.fill();
+      ctx.fillStyle = odFraction > 0.75 ? "#3a9b21" : odFraction > 0.45 ? "#d8892f" : "#9f2342";
+      ctx.beginPath();
+      ctx.roundRect(gaugeX, gaugeY, gaugeW * odFraction, gaugeH, gaugeH / 2);
+      ctx.fill();
+
+      ctx.fillStyle = "#062c18";
+      ctx.font = "800 10px Inter, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(`OD ${fmt(row.dissolvedOxygenPercent, 0)}%`, area.x + area.w / 2, gaugeY + gaugeH + 12);
+      ctx.textAlign = "left";
+      ctx.restore();
+    }
+
+    function drawEquipmentLogo(profile, imgX, imgY, imgW, imgH) {
+      if (!engcoLogo.complete || !engcoLogo.naturalWidth || !profile.logoPanel) return;
+      const region = profile.logoPanel;
+      const panelX = imgX + imgW * region.x;
+      const panelY = imgY + imgH * region.y;
+      const panelW = imgW * region.w;
+      const panelH = imgH * region.h;
+      const aspect = engcoLogo.naturalWidth / engcoLogo.naturalHeight;
+      let logoW = panelW * (region.scale ?? 0.65);
+      let logoH = logoW / aspect;
+      const maxLogoH = panelH * 0.36;
+      if (logoH > maxLogoH) {
+        logoH = maxLogoH;
+        logoW = logoH * aspect;
+      }
+      const logoX = panelX + (panelW - logoW) / 2;
+      const logoY = panelY + panelH * (region.yOffset ?? 0.18);
+      const padX = Math.max(3, logoW * 0.06);
+      const padY = Math.max(2, logoH * 0.12);
+      ctx.save();
+      ctx.globalAlpha = 0.94;
+      ctx.fillStyle = "rgba(255, 255, 255, 0.58)";
+      ctx.strokeStyle = "rgba(159, 35, 66, 0.14)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.roundRect(logoX - padX, logoY - padY, logoW + padX * 2, logoH + padY * 2, 4);
+      ctx.fill();
+      ctx.stroke();
+      ctx.drawImage(engcoLogo, logoX, logoY, logoW, logoH);
+      ctx.restore();
+    }
+
+    function drawAgitationMeter(row, cx, cy) {
+      const radius = 17;
+      ctx.save();
+      ctx.fillStyle = "rgba(255, 255, 255, 0.88)";
+      ctx.strokeStyle = "rgba(11, 107, 53, 0.35)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius + 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+      drawImpeller(cx, cy, radius, state.angle * clamp(row.rpm / 110, 0.8, 9), "#0b6b35");
+    }
+
+    function drawVisualFallback(row, imgX, imgY, imgW, imgH) {
+      ctx.strokeStyle = "#687b8a";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.roundRect(imgX + imgW * 0.32, imgY + imgH * 0.18, imgW * 0.36, imgH * 0.66, 14);
+      ctx.stroke();
+      ctx.fillStyle = "rgba(30, 139, 198, 0.12)";
+      ctx.beginPath();
+      ctx.roundRect(imgX + imgW * 0.35, imgY + imgH * 0.36, imgW * 0.3, imgH * 0.44, 12);
+      ctx.fill();
+      drawAgitationMeter(row, imgX + imgW * 0.5, imgY + imgH * 0.62);
+    }
+
+    function drawTank(row, x, y, colW, maxH, dt) {
+      const logMin = Math.log10(Math.min(...sourceVolumes()));
+      const logMax = Math.log10(10000);
+      const normalized = (Math.log10(row.volumeL) - logMin) / (logMax - logMin);
+      const profile = visualProfiles[row.index] ?? visualProfiles[visualProfiles.length - 1];
+      const img = profile.image;
+      const targetH = clamp(maxH * profile.heightRatio * (0.95 + normalized * 0.07), 120, maxH);
+      const naturalRatio = img?.naturalWidth && img?.naturalHeight ? img.naturalWidth / img.naturalHeight : 0.72;
+      let imgH = targetH;
+      let imgW = imgH * naturalRatio;
+      const maxW = colW * profile.maxWidthRatio;
+      if (imgW > maxW) {
+        imgW = maxW;
+        imgH = imgW / naturalRatio;
+      }
+      const imgX = x + colW / 2 - imgW / 2;
+      const imgY = y + maxH - imgH;
+      const bottom = imgY + imgH;
+
+      ctx.fillStyle = "rgba(6, 44, 24, 0.1)";
+      ctx.beginPath();
+      ctx.ellipse(x + colW / 2, bottom + 5, imgW * 0.34, 7, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (img?.complete && img.naturalWidth) {
+        ctx.drawImage(img, imgX, imgY, imgW, imgH);
+      } else {
+        drawVisualFallback(row, imgX, imgY, imgW, imgH);
+      }
+      drawEquipmentLogo(profile, imgX, imgY, imgW, imgH);
+
+      const cutoutArea = {
+        x: imgX + imgW * profile.cutoutRegion.x,
+        y: imgY + imgH * profile.cutoutRegion.y,
+        w: imgW * profile.cutoutRegion.w,
+        h: imgH * profile.cutoutRegion.h
+      };
+      drawCutaway(row, cutoutArea, dt);
+
+      ctx.fillStyle = "#062c18";
+      ctx.font = "800 14px Inter, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(row.name, x + colW / 2, bottom + 28);
+      ctx.font = "900 22px Inter, sans-serif";
+      ctx.fillStyle = "#0b6b35";
+      ctx.fillText(`${fmt(row.rpm, row.rpm >= 100 ? 0 : 1)} rpm`, x + colW / 2, bottom + 56);
+      ctx.font = "600 12px Inter, sans-serif";
+      ctx.fillStyle = "#52705b";
+      ctx.fillText(`D imp. ${fmt(row.impellerMm, 0)} mm`, x + colW / 2, bottom + 78);
+      ctx.fillText(`KLa ${fmt(row.klaH, 1)} h^-1`, x + colW / 2, bottom + 96);
+      ctx.fillText(`OD ${fmt(row.dissolvedOxygenPercent, 1)}%`, x + colW / 2, bottom + 114);
+      ctx.textAlign = "left";
+    }
+
+    function drawCanvas(now) {
+      const dt = Math.min(48, now - state.lastTime);
+      state.lastTime = now;
+      if (!state.paused) state.angle += dt * 0.0028;
+
+      const rect = el.canvas.getBoundingClientRect();
+      const w = rect.width;
+      const h = rect.height;
+      ctx.clearRect(0, 0, w, h);
+      ctx.fillStyle = "#edf7ef";
+      ctx.fillRect(0, 0, w, h);
+
+      const rows = computeReactors();
+      const margin = 20;
+      const top = 34;
+      const maxH = h - 150;
+      const colW = (w - margin * 2) / rows.length;
+
+      ctx.fillStyle = "rgba(255,255,255,0.82)";
+      ctx.strokeStyle = "rgba(128,145,161,0.45)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.roundRect(22, 18, 540, 58, 8);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = "#062c18";
+      ctx.font = "800 14px Inter, sans-serif";
+      ctx.fillText("Rotacao equivalente, KLa e OD estimado", 38, 42);
+      ctx.fillStyle = "#52705b";
+      ctx.font = "500 12px Inter, sans-serif";
+      ctx.fillText(`RPM bancada: ${fmt(state.baseRpm, 0)} rpm | Aeracao: ${fmt(state.aerationVvm, 1)} VVM | OD bancada: ${fmt(rows[0].dissolvedOxygenPercent, 1)}%`, 38, 62);
+
+      rows.forEach((row, index) => {
+        drawTank(row, margin + colW * index, top, colW, maxH, dt);
+      });
+
+      requestAnimationFrame(drawCanvas);
+    }
+
+    function setupEvents() {
+      el.rpmSlider.addEventListener("input", event => setBaseRpm(event.target.value));
+      el.rpmInput.addEventListener("input", event => {
+        if (event.target.value !== "") setBaseRpm(event.target.value);
+      });
+      el.rpmInput.addEventListener("change", event => setBaseRpm(event.target.value));
+      el.aerationSlider.addEventListener("input", event => setAeration(event.target.value));
+      el.aerationInput.addEventListener("change", event => setAeration(event.target.value));
+      el.pauseButton.addEventListener("click", () => {
+        state.paused = !state.paused;
+        el.pauseButton.textContent = state.paused ? "Retomar" : "Pausar";
+      });
+      el.resetButton.addEventListener("click", () => {
+        state.aerationVvm = 1.1;
+        state.rpmOverrides = {};
+        el.aerationSlider.value = "1.1";
+        el.aerationInput.value = "1.1";
+        setSource(state.source);
+      });
+      el.syncRpmButton.addEventListener("click", clearRpmOverrides);
+      window.addEventListener("resize", resizeCanvas);
+    }
+
+    setupEvents();
+    resizeCanvas();
+    setSource("table5");
+    requestAnimationFrame(drawCanvas);
+  </script>
+</body>
+</html>
